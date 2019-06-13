@@ -1,0 +1,310 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="shortcut icon" href="icon.png">
+
+<title>Snake Online</title>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css" integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+<link rel="stylesheet" type="text/css" href="Snake.css">
+
+<center>
+    <div id="loginForm">
+        <br/><br/>
+        <h1>Quel pseudo souhaitez vous utiliser? : </h1>
+        <br/>
+        <div class="input-group col-3">
+            <input type="text" class="form-control" id="pseudo" placeholder="Pseudo">
+            <div class="input-group-append">
+              <button class="btn btn-primary" type="button" onclick="sendPseudo()">Valider</button>
+            </div>
+          </div>
+    </div>
+    <div id="scoreDiv"></div>
+    <div id="snake"></div>
+    <div id="whoPlayer"></div>
+    <div id="list">
+    </div>
+    <div id="demmand">
+    </div>
+    <div id='msg'></div>
+</center>
+
+<script src="socket.io.js"></script>
+<script type="text/javascript">
+
+    const graphics = {0 : "grey", 11: "yellow", 12: "orange", 13: "blue", 14: "#68FF5D", 2: "green", 3: "red", 4: "white"}
+
+    let playing = false;
+    let searchingForPlayer = false;
+    let watingForParty = false;
+    let listingParties = false;
+
+    let pseudo = "";
+
+    const socket = io.connect('http://' + location.hostname + ':' + location.port);
+
+    function sendPseudo() {
+        pseudo = document.getElementById("pseudo").value;
+        if (pseudo == "") {
+            pseudo = "user"+Math.round(Math.random()*10**5);
+        }
+
+        socket.emit('login', pseudo);
+    }
+
+    function sendDemmand(pseudo) {
+        socket.emit('sendDemmand', pseudo);
+    }
+
+    function acceptDemmand(pseudo) {
+        socket.emit('acceptDemmand', pseudo);
+    }
+
+    function searchPlayer() {
+        searchingForPlayer = true;
+        document.getElementById("list").innerHTML = "<br/>Recherche en cours...<br/><br/><button class='btn btn-primary' type='button' onclick='stopSearchPlayer()'>Annuler</button>";
+        socket.emit("searchPlayer");
+    }
+
+    function stopSearchPlayer() {
+         searchingForPlayer = false;
+         socket.emit("stopSearch");
+         socket.emit("displayPlayers");
+    }
+
+    function createParty() {
+        socket.emit("createParty");
+    }
+
+    function cancelParty() {
+        watingForParty = false;
+        socket.emit("cancelParty");
+    }
+
+    function listParties() {
+        listingParties = true;
+        socket.emit("listParties");
+    }
+
+    function stopListingParty() {
+        listingParties = false;
+        socket.emit("displayPlayers");
+    }
+
+    function joinParty(pseudo) {
+        listingParties = false;
+        socket.emit("joinParty", pseudo);
+    }
+
+    function startParty() {
+        socket.emit("startParty");
+    }
+
+    socket.on("quitParty", function () {
+        watingForParty = false;
+        listingParties = true;
+        playing = false;
+        document.getElementById("snake").innerHTML = "";
+        document.getElementById("msg").innerHTML = "";
+        document.getElementById("whoPlayer").innerHTML = "";
+        document.getElementById("scoreDiv").innerHTML = "";
+        socket.emit("listParties");
+    });
+
+    socket.on("displayParties", function (parties) {
+        if (!listingParties) {
+            return;
+        }
+
+        let str = "<br/><br/><button class='btn btn-primary' type='button' onclick='stopListingParty()'>Annuler</button><br/><br/><h1>Les parties</h1><br/><table>";
+        for (let i=0;i<parties.length;i++) {
+           str += "<tr><td>Partie de "+parties[i]+"</td><td><button class='btn btn-primary' type='button' onclick='joinParty(`"+parties[i]+"`)'>Rejoindre</button></td></tr>";
+        }
+        if (parties.length == 0) {
+           str += "<tr><td>Il n'y aucune partie</td></td>";
+        }
+        str += "</table>";
+        document.getElementById("list").innerHTML = str;
+
+    });
+
+    socket.on("displayPlayersParty", function (datas) {
+        if (playing) {
+            return;
+        }
+        let players = datas.players;
+        watingForParty = true;
+        let str = "<br/><br/><button class='btn btn-primary' type='button' onclick='cancelParty()'>Annuler</button><br/><br/><h1>Les utilisateurs de cette partie</h1><br/><table>";
+        for (let i=0;i<players.length;i++) {
+           str += "<tr><td>"+players[i]+"</td></tr>";
+        }
+        if (players.length == 0) {
+           str += "<tr><td>Il n'y personne</td></td>";
+        }
+        str += "</table>";
+        if (datas.pseudo == pseudo) {
+           str += "<br/><button class='btn btn-primary' type='button' onclick='startParty()'>Commencer</button>"
+        }
+        document.getElementById("list").innerHTML = str;
+    });
+
+    socket.on("newPseudo", function(newPseudo) {
+        pseudo = newPseudo;
+    });
+
+    socket.on("displayPlayers", function(players) {
+        if (pseudo == "" | playing | searchingForPlayer | watingForParty | listingParties) {
+            return;
+        }
+        console.log(players);
+        if (document.body.style.backgroundImage !== "url('background.jpg')") {
+            document.body.style.backgroundImage = "url('background.jpg')";
+        }
+        document.getElementById("loginForm").style.display = "none";
+        let str =  "<br/><br/><div class='btn-group'><button class='btn btn-primary btn-lg' onclick='listParties()'>Chercher une partie</button><button class='btn btn-primary btn-lg btn-danger' onclick='createParty()'>Créer une partie</button><button class='btn btn-primary btn-lg' onclick='searchPlayer()'>Chercher Joueur</button></div>"+
+                   "<br/><br/><h1>Utilisateurs connectés :</h1><br/><table>";
+        for (let i=0;i<players.length;i++) {
+            if (players[i] != pseudo) {
+                str += "<tr><td>"+players[i]+"</td><td>&nbsp;<button class='btn btn-primary' type='button' onclick='sendDemmand(`"+players[i]+"`)'>Inviter</button></td></tr>";
+            }
+        }
+        if (players.length == 1) {
+            str += "<tr><td>Il n'y a personne d'autre</td></tr>";
+        }
+        str += "</table>";
+        document.getElementById("list").innerHTML = str;
+    });
+
+    socket.on("displayLevel", function (datas) {
+        if (document.body.style.backgroundImage !== "url('background.jpg')") {
+            document.body.style.backgroundImage = "url('background.jpg')";
+        }
+        let tab = datas.tab;
+        let score = datas.score;
+        searchingForPlayer = false;
+        listingParties = false;
+        if (!playing) {
+            playing = true;
+            document.getElementById("scoreDiv").innerHTML = "Votre score : <span id='score'></span>";
+            document.getElementById("list").innerHTML = "";
+            document.getElementById("demmand").innerHTML = "";    
+        }        
+
+        let str = "<table>";
+        for (let l=0;l<tab.length;l++) {
+            str += "<tr>";
+            for (let c=0;c<tab[l].length;c++) {
+                str += "<td style='background-color: "+graphics[tab[l][c]]+"'></td>";
+            }
+            str += "</tr>";
+        }
+        str += "</table>";
+        if(document.getElementById("snake").innerHTML == "") {
+            document.getElementById("msg").innerHTML = "";
+        }
+        document.getElementById("demmand").innerHTML = "";
+        document.getElementById("snake").innerHTML = str;
+        document.getElementById("score").innerHTML = score;
+
+        let color = "";
+        switch (datas.playerType) {
+            case "J1":
+                color = "#D5D406";
+                break;
+            case "J2":
+                color = "orange";
+                break;
+            case "J3":
+                color = "blue";
+                break;
+            case "J4":
+                color = "#68FF5D";
+                break;
+
+        }
+        document.getElementById("whoPlayer").innerHTML = "Vous êtes le <font style='background-color: #999;' color='"+color+"' size='4'>"+datas.playerType+"</font>";
+    });
+
+    socket.on("msg", function(msg) {
+        let color;
+        if (msg.type == "error") {
+            color = "red";
+        } else if (msg.type == "info") {
+            color = "#008DC0";
+        }
+        document.getElementById("msg").innerHTML = "<font color='"+color+"'>"+msg.msg+"</font>";
+    });
+
+    socket.on("demmand", function(pseudo) {
+        if (playing) { return; }
+        let str = "<br/>"+pseudo+" souhaite jouer avec vous.";
+        str += "<br/><button class='btn btn-primary' type='button' onclick='acceptDemmand(`"+pseudo+"`)'>Accepter</button>";
+        document.getElementById("demmand").innerHTML = str;
+    });
+
+    socket.on("endGame", function(datas) {
+        if (datas.place == datas.nbPlayer) {
+             document.getElementById("msg").innerHTML = "<font color='#FF7F5D' size='5'>Vous êtes le dernier des "+datas.nbPlayer+" joueurs</font>";
+        } else {
+             document.getElementById("msg").innerHTML = "<font color='#FF7F5D' size='5'>Vous êtes le "+datas.place+(datas.place == 1 ? "er" : "ème")+" sur "+datas.nbPlayer+" joueurs</font>";
+        }
+        if (watingForParty) {
+            document.getElementById("msg").innerHTML = document.getElementById("msg").innerHTML + "<br/>";
+            if (datas.canVote & typeof(datas.pseudo) != "undefined") {
+                if (datas.pseudo != pseudo) {
+                    document.getElementById("msg").innerHTML = document.getElementById("msg").innerHTML + "<button class='btn btn-primary' type='button' onclick='voteToRestart()'>Rejouer</button>&nbsp;";
+                }
+            }
+            document.getElementById("msg").innerHTML = document.getElementById("msg").innerHTML + "(<span id='vote'>0 votes</span>) <span id='timeout'></span>";
+        }
+
+        document.getElementById("msg").innerHTML = document.getElementById("msg").innerHTML + "<br/><button class='btn btn-danger' type='button' onclick='backToHome()'>Menu Principal</button>";
+        
+    });
+
+    socket.on("timeout", function (sec) {
+        document.getElementById("timeout").innerHTML = "il reste "+sec+" secondes";
+    })
+
+    socket.on("newVoteToRestart", function (nbVote) {
+        document.getElementById("vote").innerHTML = nbVote+" votes";
+    })
+
+    function voteToRestart() {
+        socket.emit("voteToRestart");
+    }
+
+    function backToHome(){
+        if (watingForParty) {
+            cancelParty();
+        } else {
+            socket.emit("displayPlayers");
+        }
+        watingForParty = false;
+        playing = false;
+        document.getElementById("scoreDiv").innerHTML = "";
+        document.getElementById("snake").innerHTML = "";
+        document.getElementById("msg").innerHTML = "";
+        document.getElementById("whoPlayer").innerHTML = "";
+    }
+
+    document.onkeydown = function () {
+        switch(event.keyCode) {
+            case 38: //haut
+                socket.emit("deplace", "haut")
+                break;
+            case 40: //bas
+                socket.emit("deplace", "bas")
+                break;
+            case 37: //gauche
+                socket.emit("deplace", "gauche")
+                break;
+            case 39: //droite
+                socket.emit("deplace", "droite")
+                break;
+            case 32: //espace
+                socket.emit("projectile");
+                break;
+        }
+    }
+</script>

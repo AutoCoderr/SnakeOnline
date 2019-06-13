@@ -1,0 +1,13 @@
+#snake td {
+    width: 17px;
+    height: 17px;
+}
+#snake {
+    background-color: #000;
+}
+
+body{
+    background-image: url("snake.jpg");
+    color:black;
+    background-size: cover;
+}
