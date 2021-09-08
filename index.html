@@ -29,7 +29,7 @@
     <div id='msg'></div>
 </center>
 
-<script src="socket.io.js"></script>
+<script src="socket.io.min.js"></script>
 <script type="text/javascript">
 
     const graphics = {0 : "grey", 11: "yellow", 12: "orange", 13: "blue", 14: "#68FF5D", 2: "green", 3: "red", 4: "white"}
@@ -156,7 +156,6 @@
         if (pseudo == "" | playing | searchingForPlayer | watingForParty | listingParties) {
             return;
         }
-        console.log(players);
         if (document.body.style.backgroundImage !== "url('background.jpg')") {
             document.body.style.backgroundImage = "url('background.jpg')";
         }
@@ -187,8 +186,8 @@
             playing = true;
             document.getElementById("scoreDiv").innerHTML = "Votre score : <span id='score'></span>";
             document.getElementById("list").innerHTML = "";
-            document.getElementById("demmand").innerHTML = "";    
-        }        
+            document.getElementById("demmand").innerHTML = "";
+        }
 
         let str = "<table>";
         for (let l=0;l<tab.length;l++) {
@@ -259,7 +258,7 @@
         }
 
         document.getElementById("msg").innerHTML = document.getElementById("msg").innerHTML + "<br/><button class='btn btn-danger' type='button' onclick='backToHome()'>Menu Principal</button>";
-        
+
     });
 
     socket.on("timeout", function (sec) {

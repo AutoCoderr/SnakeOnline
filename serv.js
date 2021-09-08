@@ -30,7 +30,7 @@ const server = http.createServer(function(req, res) { // -----------------------
            res.end(content);
          }
       });
-    } else {    
+    } else {
         fs.readFile(page, 'utf-8', function(error, content) {
            if(error){
              res.writeHead(404, {"Content-Type": "text/plain"});
@@ -48,10 +48,12 @@ const server = http.createServer(function(req, res) { // -----------------------
     }
 });
 
-const io = require('socket.io').listen(server);
+const io = require('socket.io')(server, {
+    serveClient: false,
+});
 
 io.sockets.on('connection', function (socket) {
-    
+
     socket.on('login', function (pseudo) { // --------------------------------> LOGIN <--------------------------------------------
         if (typeof(socket.datas) != "undefined") {
             return;
@@ -65,7 +67,7 @@ io.sockets.on('connection', function (socket) {
             }
         }
         pseudo = pseudo+n;
-        players[pseudo] = {pseudo: pseudo, toAdd: 0, currentDirection: null, level: null, timeout: null, adversaire: null, playerType: null, serpent: [], 
+        players[pseudo] = {pseudo: pseudo, toAdd: 0, currentDirection: null, level: null, timeout: null, adversaire: null, playerType: null, serpent: [],
                            socket: socket, demmanded: "", playing: false, timeLastProjectile: null, party: null};
         socket.datas = players[pseudo];
         console.log("new connected! : "+pseudo);
@@ -294,13 +296,13 @@ io.sockets.on('connection', function (socket) {
         if (typeof(players[pseudo]) == "undefined") {
             socket.emit("msg", {msg: "Ce joueur n'existe pas", type: "error"});
         } else if (players[pseudo].demmanded != socket.datas.pseudo) {
-            socket.emit("msg", {msg: "Cet utilisateur ne vous a jamais envoyé de demmande", type: "error"}); 
+            socket.emit("msg", {msg: "Cet utilisateur ne vous a jamais envoyé de demmande", type: "error"});
         } else {
             players[pseudo].demmanded = "";
             startGame(players[pseudo],socket.datas);
         }
     });
-    
+
     socket.on('sendDemmand', function(pseudo) {
         if (typeof(socket.datas) == "undefined") {
             socket.emit("msg", {msg: "Le serveur à été relancé, veuillez actualiser", type: "error"});
@@ -523,7 +525,7 @@ function deplaceRec(coefL, coefC, player) {
                 case "J3":
                     tab[l1][c1] = 14;
                     break;
-                case "J4": 
+                case "J4":
                     tab[l1][c1] = 13;
                     break;
             }
@@ -538,7 +540,7 @@ function deplaceRec(coefL, coefC, player) {
                 case "J3":
                     tab[l1][c1] = 13;
                     break;
-                case "J4": 
+                case "J4":
                     tab[l1][c1] = 14;
                     break;
             }
@@ -563,7 +565,7 @@ function deplaceRec(coefL, coefC, player) {
                 case "J3":
                     tab[l1][c1] = 14;
                     break;
-                case "J4": 
+                case "J4":
                     tab[l1][c1] = 13;
                     break;
             }
@@ -578,7 +580,7 @@ function deplaceRec(coefL, coefC, player) {
                 case "J3":
                     tab[l1][c1] = 13;
                     break;
-                case "J4": 
+                case "J4":
                     tab[l1][c1] = 14;
                     break;
             }
@@ -653,7 +655,7 @@ function sendProjectile(player) {
 
     for (let i=4;i>=0;i--) {
         projectile.push({l: player.serpent[0].l+coefL*3+coefL*i, c: player.serpent[0].c+coefC*3+coefC*i});
-        if (projectile[projectile.length-1].l < 0 | projectile[projectile.length-1].l > hauteur-1 | 
+        if (projectile[projectile.length-1].l < 0 | projectile[projectile.length-1].l > hauteur-1 |
             projectile[projectile.length-1].c < 0 | projectile[projectile.length-1].c > largeur-1) {
             return;
         }
@@ -813,7 +815,7 @@ function gameOver(player) {
         player.socket.emit("endGame", {place: (player.party.participants.length+1)-(player.party.classement.length-1), nbPlayer: player.party.participants.length+1, canVote: false, pseudo: player.party.chef.pseudo});
 
         let dieds = diedPlayers(player.party);
-        
+
         if (dieds.length == player.party.participants.length) {
             let theOnlySurvivor = getTheOnlySurvivor(player.party);
             theOnlySurvivor.playing = false;
@@ -1066,4 +1068,4 @@ function startGame(J1,J2, party) {
     }
 }
 
-server.listen(3000);
+server.listen(3004);
